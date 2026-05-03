@@ -246,7 +246,9 @@
         const dialerWorker = new Worker('worker.js');
         let rawCallLogFile = null;
         let uniqueDispositions = new Set(JSON.parse(sessionStorage.getItem('dearDiallyUniqueDisps')) || []);
-        let inventoryDomainAnis = new Set(JSON.parse(sessionStorage.getItem('dearDiallyInventoryAnis')) || []);
+        
+        // 🛠️ UPDATED: Inventory Array now stored strictly in localStorage for Desktop app
+        let inventoryDomainAnis = new Set(JSON.parse(localStorage.getItem('dearDiallyInventoryAnis')) || []);
         
         const getSavedPrefs = () => JSON.parse(localStorage.getItem('diallyUserPrefs')) || { connects: [], successes: [], noAns: [], ansMac: [], badNum: [] };
 
@@ -264,8 +266,11 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             const savedLogName = sessionStorage.getItem('dearDiallyLogName');
-            const savedInvName = sessionStorage.getItem('dearDiallyInvName');
+            
+            // 🛠️ UPDATED: Check localStorage on boot to show locked status
+            const savedInvName = localStorage.getItem('dearDiallyInvName');
             if (savedInvName) flagInventorySuccess(savedInvName);
+            
             if (savedLogName && uniqueDispositions.size > 0) {
                 document.getElementById('master-upload-text').innerText = savedLogName;
                 logToConsole(`RESTORED PREVIOUS SESSION LOGS.`, 'text-emerald-400');
@@ -280,7 +285,10 @@
                 logToConsole(`PROCESSING STREAM: ${data.rows.toLocaleString()} ROWS...`, 'text-yellow-400');
             } else if (data.status === 'complete') {
                 logToConsole(`COMPLETE. ${data.total.toLocaleString()} ROWS PROCESSED.`, 'text-emerald-400');
-                sessionStorage.setItem('dearDiallyMasterData', JSON.stringify(data.results));
+                
+                // 🛠️ UPDATED: Keep Master Data in localStorage for Desktop
+                localStorage.setItem('dearDiallyMasterData', JSON.stringify(data.results));
+                
                 document.getElementById('table-container').classList.add('hidden');
                 document.getElementById('success-state').classList.remove('hidden');
                 document.getElementById('success-state').classList.add('flex');
@@ -290,7 +298,9 @@
         document.getElementById('inventoryCsvUpload').addEventListener('change', function(e) {
             const invFile = e.target.files[0];
             if (!invFile) return;
-            sessionStorage.setItem('dearDiallyInvName', invFile.name);
+            
+            // 🛠️ UPDATED: Save inventory name to localStorage
+            localStorage.setItem('dearDiallyInvName', invFile.name);
             flagInventorySuccess(invFile.name);
             logToConsole(`INVENTORY FILE SECURED: ${invFile.name}`, 'text-gray-300');
             inventoryDomainAnis.clear();
@@ -306,7 +316,9 @@
                 },
                 complete: function() {
                     logToConsole(`EXTRACTED ${inventoryDomainAnis.size} DOMAIN ANIs.`, 'text-gray-300');
-                    sessionStorage.setItem('dearDiallyInventoryAnis', JSON.stringify(Array.from(inventoryDomainAnis)));
+                    
+                    // 🛠️ UPDATED: Save actual inventory array to localStorage
+                    localStorage.setItem('dearDiallyInventoryAnis', JSON.stringify(Array.from(inventoryDomainAnis)));
                 }
             });
         });
@@ -410,7 +422,9 @@
         }
 
         document.getElementById('clear-workspace-btn').addEventListener('click', function() {
+            // 🛠️ UPDATED: Clear localStorage too when wiping the workspace
             sessionStorage.clear();
+            localStorage.clear();
             localforage.removeItem('dearDiallyRawCSV');
             window.location.reload();
         });
