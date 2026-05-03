@@ -1,0 +1,36 @@
+name: Build Dear Dially Pro
+on:
+  push:
+    branches:
+      - main  # Runs every time you push to the main branch
+  workflow_dispatch: # Allows you to run it manually from the GitHub UI
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # This tells GitHub to build on both a Mac and a Windows machine
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Electron App
+        run: npm run make
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DearDiallyPro-${{ matrix.os }}
+          path: out/make/**/*
