@@ -1,6 +1,8 @@
 {
   "name": "dear-dially-pro",
   "version": "1.0.0",
+  "description": "The professional desktop edition of Dear Dially.",
+  "author": "Kurt Laya",
   "main": "main.js",
   "scripts": {
     "start": "electron-forge start",
