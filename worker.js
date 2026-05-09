@@ -9,7 +9,7 @@ function getWeekEndingSat(dateStr) {
     return d.toISOString().split('T')[0];
 }
 
-// 🛠️ REVERSED STATE MAPPING (Abbreviations to Full Title-Case Names)
+// 🛠️ REVERSED STATE MAPPING
 const STATE_MAP = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California", 
     "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia", 
@@ -78,7 +78,7 @@ self.onmessage = function(e) {
             dailyMetrics: {}, weeklyMetrics: {}, globalDispos: {},
             globalHourly: {},
             workbenchAlerts: [],
-            dnisMetrics: {} // 🛠️ NEW: Toxic Lead Tracking
+            dnisMetrics: {} 
         };
 
         let uniqueFilters = { months: new Set(), weeks: new Set(), dates: new Set(), campaigns: new Set(), lists: new Set(), domainAnis: new Set(), areaCodes: new Set(), anis: new Set() };
@@ -173,44 +173,70 @@ self.onmessage = function(e) {
 
                 masterData.globalDispos[disp] = (masterData.globalDispos[disp] || 0) + 1;
 
-                // 🛠️ NEW: Record Toxic Lead data directly per DNIS
                 if (dnis) {
                     if(!masterData.dnisMetrics[dnis]) masterData.dnisMetrics[dnis] = { calls: 0, badNum: 0 };
                     masterData.dnisMetrics[dnis].calls++;
                     if(isUserBadNum) masterData.dnisMetrics[dnis].badNum++;
                 }
 
+                // Initialize core objects safely
                 const initBucket = (obj, key) => {
                     if (!obj[key]) obj[key] = {
                         calls: 0, outbound: 0, connects: 0, successes: 0, contacted: 0, abandons: 0, outboundLiveConnects: 0,
                         ansMac: 0, badNum: 0, sdCalls: 0, noAnswers: 0,
-                        dnisCounts: {}, uniqueDates: new Set(), dispos: {}, daily: {}, hourly: {}
+                        dnisCounts: {}, uniqueDates: new Set(),
+                        dispositions: {}, states: {}, daily: {}, hourly: {} // Added Deep Matrix Arrays
                     };
                 };
 
+                // === 🛠️ UPDATED CAMPAIGN TRACKING ===
                 initBucket(masterData.campaigns, campaign);
-                masterData.campaigns[campaign].calls++;
-                if (callType === 'outbound') masterData.campaigns[campaign].outbound++;
-                if (isContacted) masterData.campaigns[campaign].contacted++;
-                if (isUserConnect) masterData.campaigns[campaign].connects++;
-                if (isUserSuccess) masterData.campaigns[campaign].successes++;
-                if (isAbandoned) masterData.campaigns[campaign].abandons++;
-                if (isLiveConnect && callType === 'outbound') masterData.campaigns[campaign].outboundLiveConnects++;
-                masterData.campaigns[campaign].dispos[disp] = (masterData.campaigns[campaign].dispos[disp] || 0) + 1;
+                let cBucket = masterData.campaigns[campaign];
+                cBucket.calls++;
+                if (callType === 'outbound') cBucket.outbound++;
+                if (isContacted) cBucket.contacted++;
+                if (isUserConnect) cBucket.connects++;
+                if (isUserSuccess) cBucket.successes++;
+                if (isAbandoned) cBucket.abandons++;
+                if (isLiveConnect && callType === 'outbound') cBucket.outboundLiveConnects++;
                 
+                // Track Exact Dispositions
+                cBucket.dispositions[disp] = (cBucket.dispositions[disp] || 0) + 1;
+                
+                // Track Exact States
+                if (state && state !== 'Unknown') {
+                    cBucket.states[state] = (cBucket.states[state] || 0) + 1;
+                }
+                
+                if (dnis) {
+                    if(!cBucket.uniqueLeadsSet) cBucket.uniqueLeadsSet = new Set();
+                    cBucket.uniqueLeadsSet.add(dnis);
+                }
+
+                // Track Exact Daily Pacing inside Campaign
+                if (cleanDate !== 'Unknown') {
+                    if (!cBucket.daily[cleanDate]) {
+                        cBucket.daily[cleanDate] = { calls: 0, contacted: 0, connects: 0, successes: 0, abandons: 0, listsSet: new Set() };
+                    }
+                    let cd = cBucket.daily[cleanDate];
+                    cd.calls++;
+                    if (isContacted) cd.contacted++;
+                    if (isUserConnect) cd.connects++;
+                    if (isUserSuccess) cd.successes++;
+                    if (isAbandoned) cd.abandons++;
+                    if (listName) cd.listsSet.add(listName);
+                }
+
                 if (hourStr) {
                     let hr = parseInt(hourStr);
-                    if (!masterData.campaigns[campaign].hourly[hr]) masterData.campaigns[campaign].hourly[hr] = { calls: 0, abandons: 0, outboundLiveConnects: 0 };
-                    masterData.campaigns[campaign].hourly[hr].calls++;
-                    if (isAbandoned) masterData.campaigns[campaign].hourly[hr].abandons++;
-                    if (isLiveConnect && callType === 'outbound') masterData.campaigns[campaign].hourly[hr].outboundLiveConnects++;
+                    if (!cBucket.hourly[hr]) cBucket.hourly[hr] = { calls: 0, abandons: 0, outboundLiveConnects: 0, connects: 0, userConnects: 0 };
+                    cBucket.hourly[hr].calls++;
+                    if (isAbandoned) cBucket.hourly[hr].abandons++;
+                    if (isLiveConnect && callType === 'outbound') cBucket.hourly[hr].outboundLiveConnects++;
+                    if (isUserConnect) { cBucket.hourly[hr].connects++; cBucket.hourly[hr].userConnects++; }
                 }
 
-                if (dnis) {
-                    if(!masterData.campaigns[campaign].uniqueLeadsSet) masterData.campaigns[campaign].uniqueLeadsSet = new Set();
-                    masterData.campaigns[campaign].uniqueLeadsSet.add(dnis);
-                }
-
+                // === STATE TRACKING ===
                 if (state && state !== 'Unknown') {
                     initBucket(masterData.states, state);
                     masterData.states[state].calls++;
@@ -272,9 +298,13 @@ self.onmessage = function(e) {
                     
                     if (weekSat !== 'Unknown') {
                         if (!masterData.weeklyMetrics[weekSat]) {
-                            masterData.weeklyMetrics[weekSat] = { calls: 0, contacted: 0, connects: 0, successes: 0, abandons: 0, hourly: {} };
+                            masterData.weeklyMetrics[weekSat] = { 
+                                calls: 0, contacted: 0, connects: 0, successes: 0, abandons: 0, 
+                                hourly: {}, campaigns: {}, lists: {} 
+                            };
                         }
                         let w = masterData.weeklyMetrics[weekSat];
+                        
                         w.calls++;
                         if (isContacted) w.contacted++;
                         if (isUserConnect) w.connects++;
@@ -289,6 +319,20 @@ self.onmessage = function(e) {
                             if (isUserConnect) w.hourly[hr].connects++;
                             if (isUserSuccess) w.hourly[hr].successes++;
                         }
+                        
+                        if (!w.campaigns[campaign]) w.campaigns[campaign] = { calls: 0, contacted: 0, connects: 0, successes: 0, abandons: 0 };
+                        w.campaigns[campaign].calls++;
+                        if (isContacted) w.campaigns[campaign].contacted++;
+                        if (isUserConnect) w.campaigns[campaign].connects++;
+                        if (isUserSuccess) w.campaigns[campaign].successes++;
+                        if (isAbandoned) w.campaigns[campaign].abandons++;
+
+                        if (!w.lists[listName]) w.lists[listName] = { calls: 0, contacted: 0, connects: 0, successes: 0, badNum: 0 };
+                        w.lists[listName].calls++;
+                        if (isContacted) w.lists[listName].contacted++;
+                        if (isUserConnect) w.lists[listName].connects++;
+                        if (isUserSuccess) w.lists[listName].successes++;
+                        if (isUserBadNum) w.lists[listName].badNum++;
                     }
                 }
                 
@@ -316,11 +360,9 @@ self.onmessage = function(e) {
                 k.successRate = k.userConnects > 0 ? (k.userSuccesses / k.userConnects) * 100 : 0;
                 k.abandonRate = k.outboundLiveConnects > 0 ? (k.abandons / k.outboundLiveConnects) * 100 : 0;
 
-                // Stat collectors for Outlier Engine
                 let listConnRates = [], campConnRates = [], campAbnRates = [], aniDpd = [];
                 let totalListAttempts = 0, totalUniqueDnisGlobal = 0;
 
-                // --- 1. LISTS PROCESSING ---
                 for (let list in finalData.lists) {
                     let l = finalData.lists[list];
                     let dCounts = Object.values(l.dnisCounts);
@@ -340,12 +382,19 @@ self.onmessage = function(e) {
                 }
                 k.globalAvgAttempts = totalUniqueDnisGlobal > 0 ? (totalListAttempts / totalUniqueDnisGlobal) : 0;
 
-                // --- 2. CAMPAIGNS PROCESSING ---
                 for (let camp in finalData.campaigns) {
                     let c = finalData.campaigns[camp];
                     c.uniqueLeads = c.uniqueLeadsSet ? c.uniqueLeadsSet.size : 0;
                     c.avgAttempts = c.uniqueLeads > 0 ? (c.calls / c.uniqueLeads) : 0;
                     delete c.uniqueLeadsSet;
+                    
+                    // Finalize campaign daily arrays
+                    if (c.daily) {
+                        for (let d in c.daily) {
+                            c.daily[d].listCount = c.daily[d].listsSet ? c.daily[d].listsSet.size : 0;
+                            delete c.daily[d].listsSet;
+                        }
+                    }
 
                     let maxAbnCount = -1; let peakHrStr = '--:--'; let peakAbnRate = 0;
                     for (let hr = 0; hr < 24; hr++) {
@@ -365,8 +414,7 @@ self.onmessage = function(e) {
                     }
                 }
 
-                // --- 3. ANI RISK SCORING & 🛠️ NEW AREA CODE STATS ---
-                let areaCodeStats = {}; // 🛠️ NEW: Aggregate Area Code usage vs inventory
+                let areaCodeStats = {}; 
                 
                 for (let ani in finalData.anis) {
                     let a = finalData.anis[ani];
@@ -392,9 +440,8 @@ self.onmessage = function(e) {
                     else if (a.riskScore >= 45) { a.status = "At Risk"; a.action = "Rotate"; }
                     else { a.status = "Clean"; a.action = "Keep Active"; }
 
-                    if (calls > 5) aniDpd.push(a.dialsPerDay); // For outlier math
+                    if (calls > 5) aniDpd.push(a.dialsPerDay); 
                     
-                    // 🛠️ NEW: Tally area code usage
                     let ac = a.areaCode;
                     if (ac && ac !== 'Unknown') {
                         if (!areaCodeStats[ac]) areaCodeStats[ac] = { dpd: 0, anis: 0 };
@@ -403,7 +450,6 @@ self.onmessage = function(e) {
                     }
                 }
 
-                // --- 4. THE OUTLIER ENGINE (Workbench Alert Gen) ---
                 const getStats = (arr) => {
                     if(arr.length === 0) return { mean: 0, stdDev: 0 };
                     let mean = arr.reduce((acc, val) => acc + val, 0) / arr.length;
@@ -458,10 +504,9 @@ self.onmessage = function(e) {
                     }
                 }
 
-                // 🛠️ NEW: Evaluate Area Code Saturation
                 for (let ac in areaCodeStats) {
                     let stats = areaCodeStats[ac];
-                    if (stats.dpd > 50) { // Only check active ACs
+                    if (stats.dpd > 50) { 
                         let saturation = stats.dpd / stats.anis;
                         if (saturation > 75) { 
                             finalData.workbenchAlerts.push({
@@ -476,15 +521,13 @@ self.onmessage = function(e) {
                     }
                 }
 
-                // 🛠️ NEW: Build Toxic Leads Payload
                 finalData.toxicLeads = [];
                 let toxicCount = 0;
                 for (let dnis in finalData.dnisMetrics) {
                     let dm = finalData.dnisMetrics[dnis];
-                    // 3 or more attempts, ALL resulting in Bad Numbers
                     if (dm.calls >= 3 && dm.badNum === dm.calls) {
                         toxicCount++;
-                        if (finalData.toxicLeads.length < 500) { // Safety limit payload
+                        if (finalData.toxicLeads.length < 500) { 
                             finalData.toxicLeads.push({
                                 dnis: dnis,
                                 attempts: dm.calls
@@ -493,7 +536,7 @@ self.onmessage = function(e) {
                     }
                 }
                 finalData.toxicLeadsCount = toxicCount;
-                delete finalData.dnisMetrics; // Clean up massive dictionary from memory
+                delete finalData.dnisMetrics; 
 
                 if (isInitialRun) {
                     finalData.filterOptions = {

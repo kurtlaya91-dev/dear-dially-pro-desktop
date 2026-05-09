@@ -5,22 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dear Dially Pro - Connect Rates</title>
     
-    <!-- Tailwind, Fonts, Chart.js & LocalForage -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        brandblue: {
-                            DEFAULT: '#0047BB',
-                            dark: '#003388',
-                            light: '#E6EEF9'
-                        }
+                        brandblue: { DEFAULT: '#0047BB', dark: '#003388', light: '#E6EEF9' },
+                        slate: { 50: '#f8fafc', 100: '#f1f5f9', 800: '#1e293b', 900: '#0f172a' }
                     },
                     fontFamily: { sans: ['Inter', 'sans-serif'] }
                 }
@@ -28,217 +24,173 @@
         }
     </script>
     <style>
-        body { background-color: #f3f4f6; color: #111827; -webkit-font-smoothing: antialiased; }
+        body { background-color: #f8fafc; color: #0f172a; -webkit-font-smoothing: antialiased; overflow: hidden; font-family: 'Inter', sans-serif; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f3f4f6; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { border: 2px solid #ffffff; }
         
-        .data-panel { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05); }
+        .modern-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); }
         
-        /* Filter Dropdowns */
-        .filter-dropdown { display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 250px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 0.375rem; z-index: 100; margin-top: 4px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .filter-dropdown { display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 250px; overflow-y: auto; background: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; z-index: 100; margin-top: 4px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .filter-dropdown.show { display: block; }
-        .filter-option { display: flex; align-items: center; padding: 8px 12px; cursor: pointer; transition: background 0.2s; font-size: 12px; }
-        .filter-option:hover { background: #f3f4f6; }
+        .filter-option { display: flex; align-items: center; padding: 8px 12px; cursor: pointer; transition: background 0.2s; font-size: 11px; }
+        .filter-option:hover { background: #f1f5f9; }
         .filter-option input[type="checkbox"] { margin-right: 8px; cursor: pointer; accent-color: #0047BB; }
         
         .header-sticky { position: sticky; top: 0; z-index: 30; }
         .corner-sticky { position: sticky; top: 0; left: 0; z-index: 40; }
         
-        /* Flawless Zebra Striping w/ Sticky Columns */
-        .table-row-zebra { border-bottom: 1px solid #f3f4f6; transition: background-color 0.15s; }
-        .table-row-zebra:nth-child(even) { background-color: #f9fafb; }
+        .table-row-zebra { border-bottom: 1px solid #f1f5f9; transition: background-color 0.15s; }
+        .table-row-zebra:nth-child(even) { background-color: #f8fafc; }
         .table-row-zebra:hover { background-color: #E6EEF9 !important; }
         
-        .table-row-zebra td.sticky-left { background-color: white; transition: background-color 0.15s; border-right: 1px solid #e5e7eb; position: sticky; left: 0; z-index: 10; }
-        .table-row-zebra:nth-child(even) td.sticky-left { background-color: #f9fafb; }
+        .table-row-zebra td.sticky-left { background-color: white; transition: background-color 0.15s; border-right: 1px solid #e2e8f0; position: sticky; left: 0; z-index: 10; }
+        .table-row-zebra:nth-child(even) td.sticky-left { background-color: #f8fafc; }
         .table-row-zebra:hover td.sticky-left { background-color: #E6EEF9 !important; }
         
-        /* Interactive Metrics Overlay */
         .metric-cell { transition: filter 0.2s; }
         .table-row-zebra:hover .metric-cell { filter: brightness(0.95); }
 
-        /* Sorting UI */
-        th.sortable:hover { cursor: pointer; filter: brightness(0.95); }
-        th.sortable::after { content: '↕'; margin-left: 4px; font-size: 10px; opacity: 0.3; display: inline-block; }
-        th.sortable.asc::after { content: '↑'; opacity: 1; color: currentColor; }
-        th.sortable.desc::after { content: '↓'; opacity: 1; color: currentColor; }
-
+        th.sortable:hover { cursor: pointer; background-color: #f1f5f9; transition: background-color 0.2s; }
         .toggle-btn { transition: all 0.2s ease-in-out; }
+        table { table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: 0; }
     </style>
 </head>
-<body class="min-h-screen flex p-4 overflow-hidden relative">
+<body class="h-screen w-screen flex flex-col overflow-hidden selection:bg-brandblue/20">
 
-    <div id="loading-overlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center hidden">
-        <div class="w-16 h-16 rounded-full border-4 border-gray-700 border-t-brandblue animate-spin mb-4"></div>
-        <h2 class="text-white font-bold tracking-widest uppercase">Applying Filters...</h2>
+    <div id="loading-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100] flex flex-col items-center justify-center hidden">
+        <div class="w-16 h-16 rounded-full border-4 border-slate-700 border-t-brandblue animate-spin mb-4 shadow-[0_0_15px_rgba(0,71,187,0.5)]"></div>
+        <h2 class="text-white font-black text-xl tracking-widest uppercase">Processing Matrix...</h2>
+        <p id="batch-progress" class="text-brandblue-light text-[10px] mt-3 font-mono font-bold tracking-widest uppercase">Initializing</p>
     </div>
 
-    <!-- MASTER FLOATING SIDEBAR -->
-    <nav id="sidebar" class="fixed left-4 top-4 bottom-4 z-50 w-[72px] flex flex-col justify-between rounded-lg border border-gray-200 bg-white shadow-lg transition-all duration-300 overflow-y-auto custom-scrollbar">
-        <div class="py-6 space-y-6 w-64">
-            <div class="flex items-center px-4 mb-6">
-                <div class="w-10 h-10 rounded-md bg-brandblue flex items-center justify-center shadow-sm">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+    <div id="ai-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col border border-slate-200 transform transition-all">
+            <div class="bg-gradient-to-r from-[#003388] to-[#0047BB] p-4 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-md bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <h2 class="text-lg font-black text-white tracking-widest uppercase">Ask Dially</h2>
                 </div>
-                <h2 class="ml-3 text-gray-900 font-bold opacity-0 transition-opacity duration-300 menu-text whitespace-nowrap">Dear Dially <span class="ml-1 px-1 py-0.5 rounded text-[9px] bg-brandblue text-white">PRO</span></h2>
+                <button onclick="document.getElementById('ai-modal').classList.add('hidden')" class="text-white/70 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
-            
-            <ul class="space-y-1 px-3 pb-8">
-                <a href="home.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                    <svg class="w-5 h-5 text-gray-400 group-hover:text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                    <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">Home</span>
-                </a>
-                
-                <a href="dialer-overview.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                    <svg class="w-5 h-5 text-gray-400 group-hover:text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z"></path></svg>
-                    <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">Dialer Overview</span>
-                </a>
-
-                <a href="campaigns.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                    <svg class="w-5 h-5 text-gray-400 group-hover:text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                    <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">Campaigns</span>
-                </a>
-
-                <a href="lists.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                    <svg class="w-5 h-5 text-gray-400 group-hover:text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">Lists</span>
-                </a>
-                
-                <!-- ACTIVE TAB -->
-                <a href="connect-rates.html" class="relative flex items-center w-full p-3 rounded-md bg-brandblue-light/50 group">
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-brandblue rounded-r-sm"></div>
-                    <svg class="w-5 h-5 text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                    <span class="ml-4 text-sm font-bold text-brandblue opacity-0 menu-text whitespace-nowrap">Connect Rates</span>
-                </a>
-
-                <a href="comparo.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                    <svg class="w-5 h-5 text-gray-400 group-hover:text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                    <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">OB Workbench</span>
-                </a>
-
-                <a href="abandons.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                    <svg class="w-5 h-5 text-gray-400 group-hover:text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
-                    <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">Abandons</span>
-                </a>
-                
-                <a href="ani-health.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                    <svg class="w-5 h-5 text-gray-400 group-hover:text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                    <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">ANI Health</span>
-                </a>
-                
-                <a href="ani-risk.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                    <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
-                    <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">ANI Risk Matrix</span>
-                </a>
-                
-                <div class="pt-4 mt-4 border-t border-gray-100">
-                    <a href="settings.html" class="relative flex items-center w-full p-3 rounded-md hover:bg-gray-50 group">
-                        <svg class="w-5 h-5 text-gray-400 group-hover:text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-                        <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">Settings</span>
-                    </a>
-                    <a href="index.html" class="relative flex items-center w-full p-3 mt-2 rounded-md hover:bg-red-50 group">
-                        <svg class="w-5 h-5 text-gray-400 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        <span class="ml-4 text-sm font-semibold text-gray-600 opacity-0 menu-text whitespace-nowrap">Log Out</span>
-                    </a>
+            <div class="p-8 bg-slate-50 flex flex-col items-center text-center">
+                <div class="w-20 h-20 bg-brandblue-light rounded-full flex items-center justify-center mb-6 shadow-inner border-4 border-white">
+                    <span class="text-4xl animate-bounce">☕</span>
                 </div>
-            </ul>
-        </div>
-    </nav>
-
-    <main class="flex-1 ml-[88px] p-4 lg:p-8 overflow-y-auto space-y-6 h-screen custom-scrollbar relative pb-24">
-        
-        <!-- HEADER -->
-        <div class="flex justify-between items-end pb-4 border-b border-gray-200 shrink-0">
-            <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 rounded-md bg-brandblue flex items-center justify-center shadow-md">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                </div>
-                <h1 class="text-2xl font-black text-gray-900 tracking-tighter">Connect Rates</h1>
-            </div>
-            
-            <div class="flex items-center space-x-3">
-                <button id="toggle-filters-btn" class="bg-white border border-gray-300 hover:border-brandblue hover:bg-gray-50 text-gray-700 font-bold text-xs px-4 py-2 rounded-md transition-colors flex items-center shadow-sm">
-                    <svg class="w-4 h-4 mr-2 text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-                    <span id="toggle-filters-text">Show Filters</span>
+                <h3 class="text-xl font-black text-slate-800 tracking-tight mb-3">Dially is on a coffee break!</h3>
+                <p class="text-sm text-slate-500 font-medium leading-relaxed mb-8">
+                    We're still wiring up the smart circuits. Dially's AI-powered insights, predictive strategies, and mind-reading capabilities will be available in a future update. Stay tuned!
+                </p>
+                <button onclick="document.getElementById('ai-modal').classList.add('hidden')" class="w-full bg-brandblue hover:bg-brandblue-dark text-white text-[11px] font-black tracking-widest uppercase px-6 py-3 rounded-lg shadow-md transition-all">
+                    Got it!
                 </button>
             </div>
         </div>
+    </div>
 
-        <!-- FILTER BAR (NO INLINE ONCLICKS - ROCK SOLID BINDING) -->
-        <div id="filter-bar" class="data-panel p-5 flex-col gap-4 shrink-0 z-40 relative hidden transition-all duration-300">
+    <div class="z-50 bg-gradient-to-r from-[#003388] to-[#0047BB] shadow-md shrink-0 w-full px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div class="flex items-center">
+            <div class="w-8 h-8 bg-white/10 rounded flex items-center justify-center mr-3 backdrop-blur-sm border border-white/10">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-black text-white tracking-tight leading-tight uppercase">Connect Rates</h1>
+                <p class="text-[10px] text-brandblue-light font-medium tracking-widest uppercase opacity-80">Global Conversion Diagnostics</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <button id="toggle-filters-btn" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-[10px] px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm uppercase tracking-widest backdrop-blur-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                <span id="toggle-filters-text">Show Filters</span>
+            </button>
+            
+            <button id="ask-dially-trigger" class="bg-white hover:bg-slate-50 text-brandblue-dark text-[10px] font-black tracking-widest uppercase px-4 py-2 rounded-lg shadow-sm transition-all flex items-center">
+                <svg class="w-4 h-4 mr-2 text-brandblue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Ask Dially
+            </button>
+
+            <div class="h-5 w-px bg-white/30 mx-1"></div>
+            
+            <button onclick="exportToGlobalCSV()" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white p-2 rounded-lg shadow-sm transition-all backdrop-blur-sm" title="Export Dashboard to CSV">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </button>
+            <button onclick="exportWorkspacePDF()" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white p-2 rounded-lg shadow-sm transition-all backdrop-blur-sm" title="Export Dashboard to PDF">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <main class="flex-1 w-full flex flex-col h-full space-y-6 px-6 lg:px-8 py-6 min-h-0 overflow-y-auto custom-scrollbar bg-slate-50" id="pdf-export-area">
+
+        <div id="filter-bar" class="modern-panel p-5 flex-col gap-4 shrink-0 z-40 relative hidden transition-all duration-300" data-html2canvas-ignore="true">
             <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-                <div class="relative"><label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Month</label>
-                    <div class="relative cursor-pointer bg-white border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors" id="btn-filter-month" onclick="window.toggleDropdown('dropdown-month')">
-                        <span id="text-filter-month" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <div class="relative"><label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Month</label>
+                    <div class="relative cursor-pointer bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors shadow-sm" id="btn-filter-month" onclick="window.toggleDropdown('dropdown-month')">
+                        <span id="text-filter-month" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div><div class="filter-dropdown custom-scrollbar" id="dropdown-month"></div>
                 </div>
-                
-                <div class="relative"><label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Week Ending</label>
-                    <div class="relative cursor-pointer bg-white border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors" id="btn-filter-week" onclick="window.toggleDropdown('dropdown-week')">
-                        <span id="text-filter-week" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <div class="relative"><label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Week Ending</label>
+                    <div class="relative cursor-pointer bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors shadow-sm" id="btn-filter-week" onclick="window.toggleDropdown('dropdown-week')">
+                        <span id="text-filter-week" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div><div class="filter-dropdown custom-scrollbar" id="dropdown-week"></div>
                 </div>
-                
-                <div class="relative"><label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Date</label>
-                    <div class="relative cursor-pointer bg-white border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors" id="btn-filter-date" onclick="window.toggleDropdown('dropdown-date')">
-                        <span id="text-filter-date" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <div class="relative"><label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Date</label>
+                    <div class="relative cursor-pointer bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors shadow-sm" id="btn-filter-date" onclick="window.toggleDropdown('dropdown-date')">
+                        <span id="text-filter-date" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div><div class="filter-dropdown custom-scrollbar" id="dropdown-date"></div>
                 </div>
-                
-                <div class="relative"><label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Campaign</label>
-                    <div class="relative cursor-pointer bg-white border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors" id="btn-filter-campaign" onclick="window.toggleDropdown('dropdown-campaign')">
-                        <span id="text-filter-campaign" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <div class="relative"><label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Campaign</label>
+                    <div class="relative cursor-pointer bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors shadow-sm" id="btn-filter-campaign" onclick="window.toggleDropdown('dropdown-campaign')">
+                        <span id="text-filter-campaign" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div><div class="filter-dropdown custom-scrollbar" id="dropdown-campaign"></div>
                 </div>
-                
-                <div class="relative"><label class="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">List</label>
-                    <div class="relative cursor-pointer bg-white border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors" id="btn-filter-list" onclick="window.toggleDropdown('dropdown-list')">
-                        <span id="text-filter-list" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <div class="relative"><label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">List</label>
+                    <div class="relative cursor-pointer bg-white border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-800 font-medium hover:border-brandblue flex justify-between items-center transition-colors shadow-sm" id="btn-filter-list" onclick="window.toggleDropdown('dropdown-list')">
+                        <span id="text-filter-list" class="truncate pr-2">All Selected</span><svg class="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div><div class="filter-dropdown custom-scrollbar" id="dropdown-list"></div>
                 </div>
             </div>
-            <div class="flex justify-end border-t border-gray-100 pt-4 mt-2 items-center">
+            <div class="flex justify-end border-t border-slate-100 pt-4 mt-2 items-center">
                 <button id="clear-filters-btn" class="text-xs font-bold text-red-600 hover:text-red-800 transition-colors uppercase tracking-widest mr-4 hidden">Clear Filters</button>
-                <button id="apply-filters-btn" class="bg-brandblue hover:bg-brandblue-dark text-white text-xs font-bold px-6 py-2 rounded-md shadow-sm transition-all uppercase tracking-widest">Apply Filters</button>
+                <button id="apply-filters-btn" class="bg-brandblue hover:bg-brandblue-dark text-white text-xs font-black px-6 py-2 rounded-md shadow-sm transition-all uppercase tracking-widest">Apply Filters</button>
             </div>
         </div>
 
-        <!-- NEW SMART INSIGHTS CARDS (PRO UI Gradients) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
-            <div class="bg-gradient-to-br from-blue-700 to-blue-900 border border-blue-800 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
+            <div class="bg-gradient-to-br from-blue-700 to-blue-900 border border-blue-800 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden card-hover">
                 <span class="text-[10px] font-bold text-blue-200 uppercase tracking-widest z-10" id="insight-best-hour-label">Best Contact Hour</span>
                 <div class="mt-2 flex items-end justify-between z-10">
                     <span class="text-3xl font-black text-white whitespace-pre-line tracking-tighter" id="insight-best-hour">--</span>
                 </div>
             </div>
             
-            <div class="bg-gradient-to-br from-emerald-700 to-emerald-900 border border-emerald-800 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
+            <div class="bg-gradient-to-br from-emerald-700 to-emerald-900 border border-emerald-800 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden card-hover">
                 <span class="text-[10px] font-bold text-emerald-200 uppercase tracking-widest z-10" id="insight-top-state-label">Top Contact State</span>
                 <div class="mt-2 flex items-end justify-between z-10">
                     <span class="text-3xl font-black text-white whitespace-pre-line tracking-tighter" id="insight-top-state">--</span>
                 </div>
             </div>
 
-            <div class="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
-                <span class="text-[10px] font-bold text-gray-300 uppercase tracking-widest z-10">Peak Global Volume</span>
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden card-hover">
+                <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest z-10">Peak Global Volume</span>
                 <div class="mt-2 flex items-end justify-between z-10">
                     <span class="text-3xl font-black text-white whitespace-pre-line tracking-tighter" id="insight-peak-vol">--</span>
                 </div>
             </div>
         </div>
 
-        <!-- SPLIT TOP WIDGET: KPIS & FUNNEL -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
-            <!-- Left Side: Major KPIs Stacked -->
             <div class="lg:col-span-1 flex flex-col space-y-4">
-                <div class="data-panel p-6 flex flex-col items-center justify-center flex-1">
-                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Overall Calls</span>
-                    <span class="text-4xl font-black text-gray-900 font-mono tracking-tighter" id="kpi-total-calls">--</span>
+                <div class="modern-panel p-6 flex flex-col items-center justify-center flex-1">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Overall Calls</span>
+                    <span class="text-4xl font-black text-slate-900 font-mono tracking-tighter" id="kpi-total-calls">--</span>
                 </div>
                 <div class="grid grid-cols-2 gap-4 flex-1">
                     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm flex flex-col items-center justify-center">
@@ -252,120 +204,112 @@
                 </div>
             </div>
 
-            <!-- Right Side: Global Funnel Chart -->
-            <div class="lg:col-span-2 data-panel p-6 flex flex-col items-center justify-center relative overflow-hidden">
-                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest absolute top-4 left-5">Global Conversion Funnel</h3>
+            <div class="lg:col-span-2 modern-panel p-6 flex flex-col items-center justify-center relative overflow-hidden">
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest absolute top-4 left-5">Global Conversion Funnel</h3>
                 <div class="flex items-center justify-between w-full h-full pt-4 space-x-2">
-                    
                     <div class="flex flex-col items-center flex-1">
-                        <div class="w-full h-28 rounded-xl bg-gray-50 border-2 border-gray-200 flex flex-col items-center justify-center shadow-inner relative z-10 cursor-default">
-                            <span class="text-2xl font-black text-gray-800 font-mono tracking-tighter" id="funnel-calls">--</span>
-                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Calls</span>
+                        <div class="w-full h-28 rounded-xl bg-slate-50 border-2 border-slate-200 flex flex-col items-center justify-center shadow-inner relative z-10 cursor-default">
+                            <span class="text-2xl font-black text-slate-800 font-mono tracking-tighter" id="funnel-calls">--</span>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Calls</span>
                         </div>
                     </div>
-                    
-                    <div class="flex flex-col items-center text-gray-300">
+                    <div class="flex flex-col items-center text-slate-300">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
                         <span class="text-[11px] font-bold text-blue-600 mt-1" id="funnel-ctc-rate">--%</span>
                     </div>
-
                     <div class="flex flex-col items-center flex-1">
                         <div class="w-full h-28 rounded-xl bg-blue-50 border-2 border-blue-200 flex flex-col items-center justify-center shadow-inner relative z-10 cursor-default">
                             <span class="text-2xl font-black text-blue-700 font-mono tracking-tighter" id="funnel-contacted">--</span>
                             <span class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">Contacted</span>
                         </div>
                     </div>
-
-                    <div class="flex flex-col items-center text-gray-300">
+                    <div class="flex flex-col items-center text-slate-300">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
                         <span class="text-[11px] font-bold text-emerald-600 mt-1" id="funnel-conn-rate">--%</span>
                     </div>
-
                     <div class="flex flex-col items-center flex-1">
                         <div class="w-full h-28 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex flex-col items-center justify-center shadow-inner relative z-10 cursor-default">
                             <span class="text-2xl font-black text-emerald-700 font-mono tracking-tighter" id="funnel-connected">--</span>
                             <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-1">Connected</span>
                         </div>
                     </div>
-
-                    <div class="flex flex-col items-center text-gray-300">
+                    <div class="flex flex-col items-center text-slate-300">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
                         <span class="text-[11px] font-bold text-indigo-600 mt-1" id="funnel-succ-rate">--%</span>
                     </div>
-
                     <div class="flex flex-col items-center flex-1">
                         <div class="w-full h-28 rounded-xl bg-indigo-50 border-2 border-indigo-200 flex flex-col items-center justify-center shadow-inner relative z-10 cursor-default">
                             <span class="text-2xl font-black text-indigo-700 font-mono tracking-tighter" id="funnel-successes">--</span>
                             <span class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-1">Successes</span>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
 
-        <!-- NEW 1x2 TREND CHARTS: VOLUME & LAYERED QUALITY -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0">
-            <div class="data-panel p-5 flex flex-col h-[300px]">
-                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">14-Day Volume Trend</h3>
+            <div class="modern-panel p-5 flex flex-col h-[300px]">
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">14-Day Volume Trend</h3>
                 <div class="flex-1 relative w-full"><canvas id="chart-vol"></canvas></div>
             </div>
-            <div class="data-panel p-5 flex flex-col h-[300px]">
-                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">14-Day Quality Trend</h3>
+            <div class="modern-panel p-5 flex flex-col h-[300px]">
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">14-Day Quality Trend</h3>
                 <div class="flex-1 relative w-full"><canvas id="chart-quality"></canvas></div>
             </div>
         </div>
 
-        <!-- DASHBOARD CONTROLS -->
-        <div class="flex justify-between items-center shrink-0 bg-gray-100 p-2 rounded-xl border border-gray-200 shadow-inner mt-4">
-            <div class="flex space-x-1 bg-white p-1 rounded-lg border border-gray-300 shadow-sm">
-                <button class="toggle-btn px-6 py-2 text-xs rounded shadow-sm bg-blue-50 text-blue-700 font-bold" id="btn-metric-contacted" onclick="window.setMetric('contacted')">Contacted</button>
-                <button class="toggle-btn px-6 py-2 text-xs rounded text-gray-500 hover:text-gray-700 font-semibold" id="btn-metric-connected" onclick="window.setMetric('connected')">Connected</button>
-                <button class="toggle-btn px-6 py-2 text-xs rounded text-gray-500 hover:text-gray-700 font-semibold" id="btn-metric-success" onclick="window.setMetric('success')">Success</button>
+        <div class="flex justify-between items-center shrink-0 bg-slate-100 p-2 rounded-xl border border-slate-200 shadow-inner mt-4" data-html2canvas-ignore="true">
+            <div class="flex space-x-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                <button class="toggle-btn px-6 py-2 text-[11px] rounded shadow-sm bg-blue-50 text-blue-700 font-bold tracking-wide" id="btn-metric-contacted" onclick="window.setMetric('contacted')">Contacted</button>
+                <button class="toggle-btn px-6 py-2 text-[11px] rounded text-slate-500 hover:text-slate-800 font-semibold tracking-wide" id="btn-metric-connected" onclick="window.setMetric('connected')">Connected</button>
+                <button class="toggle-btn px-6 py-2 text-[11px] rounded text-slate-500 hover:text-slate-800 font-semibold tracking-wide" id="btn-metric-success" onclick="window.setMetric('success')">Success</button>
             </div>
-            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center">
+            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center">
                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg> Matrix Rendering Mode
             </div>
-            <div class="flex space-x-1 bg-white p-1 rounded-lg border border-gray-300 shadow-sm">
-                <button class="toggle-btn px-6 py-2 text-xs rounded shadow-sm bg-brandblue-light/50 text-brandblue font-bold" id="btn-format-pct" onclick="window.setFormat('pct')">Percent (%)</button>
-                <button class="toggle-btn px-6 py-2 text-xs rounded text-gray-500 hover:text-gray-700 font-semibold" id="btn-format-count" onclick="window.setFormat('count')">Count (#)</button>
+            <div class="flex space-x-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                <button class="toggle-btn px-6 py-2 text-[11px] rounded shadow-sm bg-brandblue-light/50 text-brandblue font-bold tracking-wide" id="btn-format-pct" onclick="window.setFormat('pct')">Percent (%)</button>
+                <button class="toggle-btn px-6 py-2 text-[11px] rounded text-slate-500 hover:text-slate-800 font-semibold tracking-wide" id="btn-format-count" onclick="window.setFormat('count')">Count (#)</button>
             </div>
         </div>
 
-        <!-- MATRIX 1: CAMPAIGN VIEW -->
-        <div class="data-panel overflow-hidden flex flex-col relative">
-            <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 shrink-0 flex justify-between items-center">
-                <h3 class="text-xs font-bold text-gray-700 uppercase tracking-widest">Campaign View <span class="text-gray-400 font-medium normal-case ml-2">(Campaign x Date)</span></h3>
+        <div class="modern-panel overflow-hidden flex flex-col relative h-fit min-h-[800px]">
+            <div class="bg-slate-50 border-b border-slate-200 px-5 py-4 shrink-0 flex justify-between items-center" data-html2canvas-ignore="true">
+                <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Campaign View <span class="text-slate-400 font-medium normal-case ml-2 tracking-normal">(Campaign x Date)</span></h3>
+                <button onclick="window.exportMatrixToCSV('matrix-camp-body', 'Campaign_Matrix.csv')" class="bg-white border border-slate-200 text-slate-600 hover:text-brandblue font-bold text-[9px] px-4 py-1.5 rounded shadow-sm uppercase tracking-widest transition-colors">Export CSV</button>
             </div>
-            <div class="overflow-auto custom-scrollbar max-h-[570px]">
-                <table class="w-full text-left border-collapse min-w-[800px]">
-                    <thead class="header-sticky" id="matrix-camp-header"></thead>
-                    <tbody class="text-xs font-mono" id="matrix-camp-body"></tbody>
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse min-w-[1200px]">
+                    <thead class="header-sticky z-20" id="matrix-camp-header"></thead>
+                    <tbody class="text-xs" id="matrix-camp-body"></tbody>
                 </table>
             </div>
+            <div id="pagination-trigger-camp" class="p-6 flex justify-center hidden bg-slate-50 border-t border-slate-200" data-html2canvas-ignore="true">
+                <button type="button" id="btn-load-more-camp" class="px-8 py-2.5 bg-brandblue hover:bg-brandblue-dark text-white text-[11px] font-black uppercase tracking-widest rounded-lg shadow-md transition-all">Load More Campaigns</button>
+            </div>
         </div>
 
-        <!-- MATRIX 2: HOURLY VIEW -->
-        <div class="data-panel overflow-hidden flex flex-col relative mt-6">
-            <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 shrink-0 flex justify-between items-center">
-                <h3 class="text-xs font-bold text-gray-700 uppercase tracking-widest">Hourly View <span class="text-gray-400 font-medium normal-case ml-2">(Date x Hour)</span></h3>
+        <div class="modern-panel overflow-hidden flex flex-col relative mt-6 h-fit min-h-[800px]">
+            <div class="bg-slate-50 border-b border-slate-200 px-5 py-4 shrink-0 flex justify-between items-center" data-html2canvas-ignore="true">
+                <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Hourly View <span class="text-slate-400 font-medium normal-case ml-2 tracking-normal">(Date x Hour)</span></h3>
+                <button onclick="window.exportMatrixToCSV('matrix-hourly-body', 'Hourly_Matrix.csv')" class="bg-white border border-slate-200 text-slate-600 hover:text-brandblue font-bold text-[9px] px-4 py-1.5 rounded shadow-sm uppercase tracking-widest transition-colors">Export CSV</button>
             </div>
-            <div class="overflow-auto custom-scrollbar max-h-[570px]">
+            <div class="overflow-x-auto custom-scrollbar">
                 <table class="w-full text-left border-collapse min-w-[800px]">
-                    <thead class="header-sticky" id="matrix-hourly-header"></thead>
+                    <thead class="header-sticky z-20" id="matrix-hourly-header"></thead>
                     <tbody class="text-xs font-mono" id="matrix-hourly-body"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- MATRIX 3: STATE BY HOUR -->
-        <div class="data-panel overflow-hidden flex flex-col relative mt-6">
-            <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 shrink-0 flex justify-between items-center">
-                <h3 class="text-xs font-bold text-gray-700 uppercase tracking-widest">State Routing Insights <span class="text-gray-400 font-medium normal-case ml-2">(State x Hour)</span></h3>
+        <div class="modern-panel overflow-hidden flex flex-col relative mt-6 h-fit min-h-[800px]">
+            <div class="bg-slate-50 border-b border-slate-200 px-5 py-4 shrink-0 flex justify-between items-center" data-html2canvas-ignore="true">
+                <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">State Routing Insights <span class="text-slate-400 font-medium normal-case ml-2 tracking-normal">(State x Hour)</span></h3>
+                <button onclick="window.exportMatrixToCSV('matrix-state-body', 'State_Matrix.csv')" class="bg-white border border-slate-200 text-slate-600 hover:text-brandblue font-bold text-[9px] px-4 py-1.5 rounded shadow-sm uppercase tracking-widest transition-colors">Export CSV</button>
             </div>
-            <div class="overflow-auto custom-scrollbar max-h-[570px]">
+            <div class="overflow-x-auto custom-scrollbar">
                 <table class="w-full text-left border-collapse min-w-[800px]">
-                    <thead class="header-sticky" id="matrix-state-header"></thead>
+                    <thead class="header-sticky z-20" id="matrix-state-header"></thead>
                     <tbody class="text-xs font-mono" id="matrix-state-body"></tbody>
                 </table>
             </div>
@@ -376,15 +320,6 @@
     <script>
         window.addEventListener('DOMContentLoaded', () => {
 
-            // Sidebar Hover
-            const sidebar = document.getElementById('sidebar');
-            const menuTexts = document.querySelectorAll('.menu-text');
-            if(sidebar) {
-                sidebar.addEventListener('mouseenter', () => { sidebar.classList.replace('w-[72px]', 'w-64'); menuTexts.forEach(el => el.classList.remove('opacity-0')); });
-                sidebar.addEventListener('mouseleave', () => { sidebar.classList.replace('w-64', 'w-[72px]'); menuTexts.forEach(el => el.classList.add('opacity-0')); });
-            }
-
-            // Universal Filter Toggle
             window.toggleDropdown = function(id) {
                 const el = document.getElementById(id);
                 const isShowing = el.classList.contains('show');
@@ -415,7 +350,6 @@
 
             const formatPct = (val) => isNaN(val) || !isFinite(val) ? "0.0%" : val.toFixed(1) + "%";
 
-            // GLOBAL UI STATE
             let currentMetric = 'contacted'; 
             let currentFormat = 'pct'; 
             let activeData = null; 
@@ -425,17 +359,18 @@
             let stateSortCol = 'stateStr'; let stateSortAsc = true;
             
             let cTableData = []; let hTableData = []; let sTableData = [];
+            let itemsToShowCamp = 100; 
             let trendCharts = {};
 
             window.setMetric = function(metric) {
                 currentMetric = metric;
                 ['contacted', 'connected', 'success'].forEach(m => {
                     let btn = document.getElementById(`btn-metric-${m}`);
-                    if(btn) btn.className = "toggle-btn px-6 py-2 text-xs rounded text-gray-500 hover:text-gray-700 font-semibold";
+                    if(btn) btn.className = "toggle-btn px-6 py-2 text-[11px] rounded text-slate-500 hover:text-slate-800 font-semibold tracking-wide";
                 });
                 let activeBtn = document.getElementById(`btn-metric-${metric}`);
                 let color = metric === 'contacted' ? 'text-blue-700 bg-blue-50' : (metric === 'connected' ? 'text-emerald-700 bg-emerald-50' : 'text-indigo-700 bg-indigo-50');
-                if(activeBtn) activeBtn.className = `toggle-btn px-6 py-2 text-xs rounded shadow-sm ${color} font-bold`;
+                if(activeBtn) activeBtn.className = `toggle-btn px-6 py-2 text-[11px] rounded shadow-sm ${color} font-bold tracking-wide`;
                 if (activeData) {
                     renderInsights();
                     renderMatrices();
@@ -446,45 +381,45 @@
                 currentFormat = format;
                 ['pct', 'count'].forEach(f => {
                     let btn = document.getElementById(`btn-format-${f}`);
-                    if(btn) btn.className = "toggle-btn px-6 py-2 text-xs rounded text-gray-500 hover:text-gray-700 font-semibold";
+                    if(btn) btn.className = "toggle-btn px-6 py-2 text-[11px] rounded text-slate-500 hover:text-slate-800 font-semibold tracking-wide";
                 });
                 let activeBtn = document.getElementById(`btn-format-${format}`);
-                if(activeBtn) activeBtn.className = "toggle-btn px-6 py-2 text-xs rounded shadow-sm bg-brandblue-light/50 text-brandblue font-bold";
+                if(activeBtn) activeBtn.className = "toggle-btn px-6 py-2 text-[11px] rounded shadow-sm bg-brandblue-light/50 text-brandblue font-bold tracking-wide";
                 if (activeData) renderMatrices();
             };
 
+            // 🛠️ MODERNIZED CELL RENDERING
             function getMatrixCellHtml(calls, targetVal, isGlobalCol = false) {
-                if (calls === 0) return `<td class="p-2 border-r border-gray-200 text-center bg-white/50 metric-cell"><span class="text-gray-300">-</span></td>`;
+                if (!calls || calls === 0) return `<td class="p-3 border-r border-slate-100 text-center bg-white/50 metric-cell min-w-[80px]"><span class="text-slate-300">-</span></td>`;
                 
-                let rate = calls > 0 ? (targetVal / calls) : 0;
-                let displayVal = currentFormat === 'pct' ? formatPct(rate * 100) : targetVal.toLocaleString();
+                let rate = calls > 0 ? ((targetVal || 0) / calls) : 0;
+                let displayVal = currentFormat === 'pct' ? formatPct(rate * 100) : (targetVal || 0).toLocaleString();
                 
-                let bgColor = '';
-                let textColor = 'text-gray-700';
+                let bgColor = '', textColor = 'text-slate-700';
                 
                 if (currentMetric === 'contacted') {
-                    if (rate < 0.15) { bgColor = 'bg-red-50/80'; textColor = 'text-red-700'; }
-                    else if (rate < 0.25) { bgColor = 'bg-amber-50/80'; textColor = 'text-amber-700'; }
-                    else { bgColor = 'bg-emerald-50/80'; textColor = 'text-emerald-700'; }
+                    if (rate < 0.15) { bgColor = 'bg-red-50'; textColor = 'text-red-600'; }
+                    else if (rate < 0.25) { bgColor = 'bg-amber-50'; textColor = 'text-amber-600'; }
+                    else { bgColor = 'bg-emerald-50'; textColor = 'text-emerald-600'; }
                 } else if (currentMetric === 'connected') {
-                    if (rate < 0.05) { bgColor = 'bg-red-50/80'; textColor = 'text-red-700'; }
-                    else if (rate < 0.15) { bgColor = 'bg-amber-50/80'; textColor = 'text-amber-700'; }
-                    else { bgColor = 'bg-emerald-50/80'; textColor = 'text-emerald-700'; }
+                    if (rate < 0.05) { bgColor = 'bg-red-50'; textColor = 'text-red-600'; }
+                    else if (rate < 0.15) { bgColor = 'bg-amber-50'; textColor = 'text-amber-600'; }
+                    else { bgColor = 'bg-emerald-50'; textColor = 'text-emerald-600'; }
                 } else { 
-                    if (rate < 0.01) { bgColor = 'bg-red-50/80'; textColor = 'text-red-700'; }
-                    else if (rate < 0.05) { bgColor = 'bg-amber-50/80'; textColor = 'text-amber-700'; }
-                    else { bgColor = 'bg-emerald-50/80'; textColor = 'text-emerald-700'; }
+                    if (rate < 0.01) { bgColor = 'bg-red-50'; textColor = 'text-red-600'; }
+                    else if (rate < 0.05) { bgColor = 'bg-amber-50'; textColor = 'text-amber-600'; }
+                    else { bgColor = 'bg-emerald-50'; textColor = 'text-emerald-600'; }
                 }
 
                 if (isGlobalCol) {
-                    bgColor = 'bg-gray-100/80 border-l-2 border-gray-300';
-                    textColor = 'text-gray-900';
+                    bgColor = 'bg-slate-50 border-l-2 border-slate-200';
+                    textColor = 'text-slate-900';
                 }
 
                 return `
-                    <td class="p-2 border-r border-gray-200 text-center ${bgColor} metric-cell transition-colors">
-                        <div class="text-[9px] font-medium text-gray-400 font-mono mb-0.5">${calls.toLocaleString()}</div>
-                        <div class="text-xs font-bold ${textColor}">${displayVal}</div>
+                    <td class="p-3 border-r border-slate-100 text-center ${bgColor} metric-cell min-w-[80px] transition-colors group-hover:brightness-95">
+                        <div class="text-[9px] font-medium text-slate-400 font-mono mb-0.5">${calls.toLocaleString()}</div>
+                        <div class="text-[13px] font-bold ${textColor}">${displayVal}</div>
                     </td>
                 `;
             }
@@ -498,26 +433,25 @@
             }
 
             const renderTrendCharts = (data) => {
-                const dates = Object.keys(data.dailyMetrics).sort().slice(-14);
+                const dates = Object.keys(data.dailyMetrics || {}).sort().slice(-14);
+                if(dates.length === 0) return;
+                
                 const labels = dates.map(d => d.substring(5)); 
                 
-                const vols = dates.map(d => data.dailyMetrics[d].calls);
-                const ctcRates = dates.map(d => data.dailyMetrics[d].calls > 0 ? (data.dailyMetrics[d].contacted / data.dailyMetrics[d].calls * 100) : 0);
-                const connRates = dates.map(d => data.dailyMetrics[d].calls > 0 ? (data.dailyMetrics[d].connects / data.dailyMetrics[d].calls * 100) : 0);
-                const succRates = dates.map(d => data.dailyMetrics[d].connects > 0 ? (data.dailyMetrics[d].successes / data.dailyMetrics[d].connects * 100) : 0);
+                const vols = dates.map(d => data.dailyMetrics[d].calls || 0);
+                const ctcRates = dates.map(d => data.dailyMetrics[d].calls > 0 ? ((data.dailyMetrics[d].contacted || 0) / data.dailyMetrics[d].calls * 100) : 0);
+                const connRates = dates.map(d => data.dailyMetrics[d].calls > 0 ? ((data.dailyMetrics[d].connects || data.dailyMetrics[d].userConnects || 0) / data.dailyMetrics[d].calls * 100) : 0);
+                const succRates = dates.map(d => (data.dailyMetrics[d].connects || data.dailyMetrics[d].userConnects || 0) > 0 ? ((data.dailyMetrics[d].successes || data.dailyMetrics[d].userSuccesses || 0) / (data.dailyMetrics[d].connects || data.dailyMetrics[d].userConnects) * 100) : 0);
 
                 Chart.defaults.font.family = "'Inter', sans-serif";
-                Chart.defaults.color = '#9ca3af';
+                Chart.defaults.color = '#94a3b8';
 
                 if (trendCharts['chart-vol']) trendCharts['chart-vol'].destroy();
                 const ctxVol = document.getElementById('chart-vol').getContext('2d');
                 trendCharts['chart-vol'] = new Chart(ctxVol, {
                     type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{ label: 'Volume', data: vols, backgroundColor: '#0047BB', borderRadius: 4 }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' } }, x: { grid: { display: false } } } }
+                    data: { labels: labels, datasets: [{ label: 'Volume', data: vols, backgroundColor: '#0047BB', borderRadius: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
                 });
 
                 const buildLineDataset = (label, chartData, color, bgColor) => ({
@@ -533,33 +467,33 @@
                         labels: labels,
                         datasets: [
                             buildLineDataset('Contact %', ctcRates, '#1d4ed8', 'rgba(29, 78, 216, 0.1)'),
-                            buildLineDataset('Connect %', connRates, '#047857', 'rgba(4, 120, 87, 0.1)'),
-                            buildLineDataset('Success %', succRates, '#4338ca', 'rgba(67, 56, 202, 0.1)')
+                            buildLineDataset('Connect %', connRates, '#059669', 'rgba(5, 150, 105, 0.1)'),
+                            buildLineDataset('Success %', succRates, '#4f46e5', 'rgba(79, 70, 229, 0.1)')
                         ]
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                         plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } }, tooltip: { callbacks: { label: function(ctx) { return `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%`; } } } },
-                        scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' } }, x: { grid: { display: false } } }
+                        scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
                     }
                 });
             };
 
             const renderInsights = () => {
-                if(!activeData) return;
+                if(!activeData || !activeData.globalHourly) return;
                 
                 let bestHr = '--', bestHrRate = -1;
                 let peakHr = '--', peakHrVol = -1;
                 let topState = '--', topStateRate = -1;
 
                 for (let hr = 8; hr <= 21; hr++) {
-                    let hData = activeData.globalHourly[hr];
+                    let hData = activeData.globalHourly[hr] || { calls: 0, contacted: 0, connects: 0, userConnects: 0, successes: 0, userSuccesses: 0 };
                     if (hData && hData.calls > 100) { 
                         if (hData.calls > peakHrVol) {
                             peakHrVol = hData.calls;
                             peakHr = `${hr}:00`;
                         }
-                        let target = currentMetric === 'contacted' ? hData.contacted : (currentMetric === 'connected' ? hData.connects : hData.successes);
+                        let target = currentMetric === 'contacted' ? (hData.contacted || 0) : (currentMetric === 'connected' ? (hData.connects || hData.userConnects || 0) : (hData.successes || hData.userSuccesses || 0));
                         let rate = target / hData.calls;
                         if (rate > bestHrRate) {
                             bestHrRate = rate;
@@ -568,16 +502,18 @@
                     }
                 }
 
-                Object.entries(activeData.states).forEach(([st, sData]) => {
-                    if (sData.calls > 100 && st !== 'Unknown') { 
-                        let target = currentMetric === 'contacted' ? sData.contacted : (currentMetric === 'connected' ? sData.connects : sData.successes);
-                        let rate = target / sData.calls;
-                        if (rate > topStateRate) {
-                            topStateRate = rate;
-                            topState = st;
+                if(activeData.states) {
+                    Object.entries(activeData.states).forEach(([st, sData]) => {
+                        if (sData.calls > 100 && st !== 'Unknown') { 
+                            let target = currentMetric === 'contacted' ? (sData.contacted || 0) : (currentMetric === 'connected' ? (sData.connects || sData.userConnects || 0) : (sData.successes || sData.userSuccesses || 0));
+                            let rate = target / sData.calls;
+                            if (rate > topStateRate) {
+                                topStateRate = rate;
+                                topState = st;
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
                 document.getElementById('insight-best-hour').innerText = bestHr !== '--' ? `${bestHr} \n(${formatPct(bestHrRate * 100)})` : '--';
                 document.getElementById('insight-peak-vol').innerText = peakHr !== '--' ? `${peakHr} \n(${peakHrVol.toLocaleString()} calls)` : '--';
@@ -588,130 +524,88 @@
                 document.getElementById('insight-top-state-label').innerText = `Top ${mLabel} State`;
             };
 
-            // Global Sort Methods
-            window.sortCamp = function(col) {
-                if (campSortCol === col) campSortAsc = !campSortAsc; else { campSortCol = col; campSortAsc = false; }
-                renderMatrices();
-            };
-            window.sortHr = function(col) {
-                if (hrSortCol === col) hrSortAsc = !hrSortAsc; else { hrSortCol = col; hrSortAsc = false; }
-                renderMatrices();
-            };
-            window.sortState = function(col) {
-                if (stateSortCol === col) stateSortAsc = !stateSortAsc; else { stateSortCol = col; stateSortAsc = false; }
-                renderMatrices();
-            };
-
-            const renderMatrices = () => {
-                if (!activeData) return;
-                const dates = Object.keys(activeData.dailyMetrics).sort();
-
-                // 1. CAMPAIGN VIEW (Solid Gradient Headers)
-                const cHeader = document.getElementById('matrix-camp-header');
-                const cBody = document.getElementById('matrix-camp-body');
-                cHeader.innerHTML = ''; cBody.innerHTML = '';
-
-                let thC = `<tr><th class="p-3 font-bold text-[10px] text-white uppercase tracking-widest corner-sticky min-w-[200px] bg-gradient-to-b from-gray-800 to-gray-900 border-r border-gray-700 shadow-sm sortable ${campSortCol==='campName' ? (campSortAsc?'asc':'desc') : ''} whitespace-nowrap" onclick="window.sortCamp('campName')">Campaign Name</th>`;
-                dates.forEach(d => {
-                    thC += `<th class="p-2 font-bold text-[10px] text-white uppercase tracking-widest text-center border-r border-[#003388] bg-gradient-to-b from-brandblue to-[#003388] min-w-[80px] header-sticky shadow-sm whitespace-nowrap">${d.substring(5)}</th>`;
-                });
-                thC += `<th class="p-2 font-bold text-[10px] text-white uppercase tracking-widest text-center border-l-2 border-gray-600 bg-gradient-to-b from-gray-700 to-gray-800 min-w-[90px] header-sticky shadow-sm sortable ${campSortCol==='totCalls' ? (campSortAsc?'asc':'desc') : ''} whitespace-nowrap" onclick="window.sortCamp('totCalls')">Total</th></tr>`;
-                cHeader.innerHTML = thC;
-
-                if (cTableData.length === 0) {
-                    Object.entries(activeData.campaigns).forEach(([campName, cData]) => {
-                        if (cData.calls === 0) return;
-                        let row = { campName: campName, totCalls: 0, totTarget: 0, days: {} };
-                        dates.forEach(d => {
-                            let calls = 0, target = 0;
-                            let dailyVolGlobal = activeData.dailyMetrics[d].calls;
-                            let globalTotal = activeData.global_kpis.totalCalls;
-                            if (globalTotal > 0 && dailyVolGlobal > 0) {
-                                let dailyWeight = dailyVolGlobal / globalTotal;
-                                calls = Math.round(cData.calls * dailyWeight);
-                                if (currentMetric === 'contacted') target = Math.round((cData.contacted || 0) * dailyWeight);
-                                else if (currentMetric === 'connected') target = Math.round((cData.connects || 0) * dailyWeight);
-                                else target = Math.round((cData.successes || 0) * dailyWeight);
-                            }
-                            row.days[d] = { calls: calls, target: target };
-                            row.totCalls += calls; row.totTarget += target;
-                        });
-                        cTableData.push(row);
-                    });
-                } else {
-                    cTableData.forEach(row => {
-                        let cData = activeData.campaigns[row.campName];
-                        row.totTarget = 0;
-                        dates.forEach(d => {
-                            let dailyVolGlobal = activeData.dailyMetrics[d].calls;
-                            let globalTotal = activeData.global_kpis.totalCalls;
-                            let target = 0;
-                            if (globalTotal > 0 && dailyVolGlobal > 0) {
-                                let dailyWeight = dailyVolGlobal / globalTotal;
-                                if (currentMetric === 'contacted') target = Math.round((cData.contacted || 0) * dailyWeight);
-                                else if (currentMetric === 'connected') target = Math.round((cData.connects || 0) * dailyWeight);
-                                else target = Math.round((cData.successes || 0) * dailyWeight);
-                            }
-                            row.days[d].target = target;
-                            row.totTarget += target;
-                        });
-                    });
-                }
-
+            window.sortCamp = function(col, skipRender = false) {
+                if (campSortCol === col && !skipRender) campSortAsc = !campSortAsc; 
+                else if (!skipRender) { campSortCol = col; campSortAsc = false; }
+                
                 cTableData.sort((a,b) => {
                     let vA = a[campSortCol]; let vB = b[campSortCol];
                     if (typeof vA === 'string') return campSortAsc ? vA.localeCompare(vB) : vB.localeCompare(vA);
                     return campSortAsc ? (vA - vB) : (vB - vA);
                 });
+                
+                if (!skipRender) {
+                    document.getElementById('matrix-camp-body').innerHTML = '';
+                    renderCampSlice();
+                }
+            };
+            
+            window.sortHr = function(col) {
+                if (hrSortCol === col) hrSortAsc = !hrSortAsc; else { hrSortCol = col; hrSortAsc = false; }
+                renderMatrices(true); 
+            };
+            window.sortState = function(col) {
+                if (stateSortCol === col) stateSortAsc = !stateSortAsc; else { stateSortCol = col; stateSortAsc = false; }
+                renderMatrices(true); 
+            };
 
-                cTableData.forEach(r => {
-                    let tr = `<tr class="table-row-zebra group"><td class="p-3 font-semibold text-gray-800 sticky-left font-sans truncate max-w-[200px] shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap" title="${r.campName}">${r.campName}</td>`;
-                    dates.forEach(d => tr += getMatrixCellHtml(r.days[d].calls, r.days[d].target));
-                    tr += getMatrixCellHtml(r.totCalls, r.totTarget, true);
-                    tr += `</tr>`;
-                    cBody.innerHTML += tr;
+            const renderCampSlice = () => {
+                const dates = Object.keys(activeData.dailyMetrics || {}).sort();
+                const cBody = document.getElementById('matrix-camp-body');
+                const start = cBody.children.length;
+                const slice = cTableData.slice(start, start + itemsToShowCamp);
+
+                const cFrag = document.createDocumentFragment();
+                slice.forEach(r => {
+                    const row = document.createElement('tr');
+                    row.className = "table-row-zebra group";
+                    let rowHtml = `<td class="p-4 font-semibold text-slate-800 sticky-left font-sans truncate w-[350px] min-w-[350px] max-w-[350px] shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap" title="${r.campName}">${r.campName}</td>`;
+                    dates.forEach(d => rowHtml += getMatrixCellHtml(r.days[d].calls, r.days[d].target));
+                    rowHtml += getMatrixCellHtml(r.totCalls, r.totTarget, true);
+                    row.innerHTML = rowHtml;
+                    cFrag.appendChild(row);
                 });
+                cBody.appendChild(cFrag);
+                
+                document.getElementById('pagination-trigger-camp').classList.toggle('hidden', cBody.children.length >= cTableData.length);
+            };
 
-                // HOURLY CALCS
-                let minHr = 23, maxHr = 0;
-                dates.forEach(d => {
-                    let wSat = getWeekEndingSat(d);
-                    let wData = activeData.weeklyMetrics[wSat];
-                    if (wData) {
-                        Object.keys(wData.hourly).forEach(hr => {
-                            let hInt = parseInt(hr);
-                            if (hInt < minHr) minHr = hInt;
-                            if (hInt > maxHr) maxHr = hInt;
-                        });
-                    }
-                });
-                if (minHr > maxHr) { minHr = 8; maxHr = 20; } 
+            document.getElementById('btn-load-more-camp').addEventListener('click', renderCampSlice);
 
-                // 2. HOURLY VIEW
+            const buildHourlyAndState = () => {
+                const dates = Object.keys(activeData.dailyMetrics || {}).sort();
+                let globalVol = activeData.global_kpis?.totalCalls || activeData.global_kpis?.calls || 1;
+
+                let minHr = 8, maxHr = 20;
+
+                // 2. HOURLY VIEW 
                 const hHeader = document.getElementById('matrix-hourly-header');
                 const hBody = document.getElementById('matrix-hourly-body');
                 hHeader.innerHTML = ''; hBody.innerHTML = '';
 
-                let thH = `<tr><th class="p-3 font-bold text-[10px] text-white uppercase tracking-widest corner-sticky min-w-[150px] bg-gradient-to-b from-gray-800 to-gray-900 border-r border-gray-700 shadow-sm sortable ${hrSortCol==='dateStr' ? (hrSortAsc?'asc':'desc') : ''} whitespace-nowrap" onclick="window.sortHr('dateStr')">Date</th>`;
+                // 🛠️ MODERNIZED HOURLY HEADERS
+                let thH = `<tr class="bg-slate-50 border-b border-slate-200">
+                    <th class="p-4 font-black text-[10px] text-slate-800 uppercase tracking-widest corner-sticky min-w-[150px] border-r border-slate-200 shadow-sm header-sortable whitespace-nowrap" onclick="window.sortHr('dateStr')">Date ↕</th>`;
                 for (let hr = minHr; hr <= maxHr; hr++) {
-                    thH += `<th class="p-2 font-bold text-[10px] text-white uppercase tracking-widest text-center border-r border-[#003388] bg-gradient-to-b from-brandblue to-[#003388] min-w-[70px] header-sticky shadow-sm whitespace-nowrap">${hr}:00</th>`;
+                    thH += `<th class="p-3 font-bold text-[10px] text-slate-500 uppercase tracking-widest text-center border-r border-slate-200 min-w-[80px] header-sticky shadow-sm whitespace-nowrap">${hr}:00</th>`;
                 }
-                thH += `<th class="p-2 font-bold text-[10px] text-white uppercase tracking-widest text-center border-l-2 border-gray-600 bg-gradient-to-b from-gray-700 to-gray-800 min-w-[90px] header-sticky shadow-sm sortable ${hrSortCol==='totCalls' ? (hrSortAsc?'asc':'desc') : ''} whitespace-nowrap" onclick="window.sortHr('totCalls')">Total</th></tr>`;
+                thH += `<th class="p-3 font-bold text-[10px] text-slate-800 uppercase tracking-widest text-center border-l-2 border-slate-200 min-w-[90px] header-sticky shadow-sm header-sortable whitespace-nowrap" onclick="window.sortHr('totCalls')">Total ↕</th></tr>`;
                 hHeader.innerHTML = thH;
 
                 if (hTableData.length === 0) {
                     dates.forEach(d => {
                         let row = { dateStr: d, totCalls: 0, totTarget: 0, hrs: {} };
-                        let wSat = getWeekEndingSat(d);
-                        let wData = activeData.weeklyMetrics[wSat];
+                        let dayVol = activeData.dailyMetrics[d].calls || 0;
+                        let dayRatio = globalVol > 0 ? (dayVol / globalVol) : 0;
+                        
                         for (let hr = minHr; hr <= maxHr; hr++) {
                             let calls = 0, target = 0;
-                            if (wData && wData.hourly[hr] && wData.calls > 0) {
-                                let dayVolRatio = activeData.dailyMetrics[d].calls / wData.calls;
-                                calls = Math.round(wData.hourly[hr].calls * dayVolRatio);
-                                if (currentMetric === 'contacted') target = Math.round((wData.hourly[hr].contacted || 0) * dayVolRatio);
-                                else if (currentMetric === 'connected') target = Math.round((wData.hourly[hr].connects || 0) * dayVolRatio);
-                                else target = Math.round((wData.hourly[hr].successes || 0) * dayVolRatio);
+                            let hDataGlobal = activeData.globalHourly?.[hr];
+                            if (hDataGlobal && dayRatio > 0) {
+                                calls = Math.round((hDataGlobal.calls || 0) * dayRatio);
+                                if (currentMetric === 'contacted') target = Math.round((hDataGlobal.contacted || 0) * dayRatio);
+                                else if (currentMetric === 'connected') target = Math.round((hDataGlobal.connects || hDataGlobal.userConnects || 0) * dayRatio);
+                                else target = Math.round((hDataGlobal.successes || hDataGlobal.userSuccesses || 0) * dayRatio);
                             }
                             row.hrs[hr] = { calls: calls, target: target };
                             row.totCalls += calls; row.totTarget += target;
@@ -720,16 +614,16 @@
                     });
                 } else {
                     hTableData.forEach(row => {
-                        let wSat = getWeekEndingSat(row.dateStr);
-                        let wData = activeData.weeklyMetrics[wSat];
+                        let dayVol = activeData.dailyMetrics[row.dateStr]?.calls || 0;
+                        let dayRatio = globalVol > 0 ? (dayVol / globalVol) : 0;
                         row.totTarget = 0;
                         for (let hr = minHr; hr <= maxHr; hr++) {
                             let target = 0;
-                            if (wData && wData.hourly[hr] && wData.calls > 0) {
-                                let dayVolRatio = activeData.dailyMetrics[row.dateStr].calls / wData.calls;
-                                if (currentMetric === 'contacted') target = Math.round((wData.hourly[hr].contacted || 0) * dayVolRatio);
-                                else if (currentMetric === 'connected') target = Math.round((wData.hourly[hr].connects || 0) * dayVolRatio);
-                                else target = Math.round((wData.hourly[hr].successes || 0) * dayVolRatio);
+                            let hDataGlobal = activeData.globalHourly?.[hr];
+                            if (hDataGlobal && dayRatio > 0) {
+                                if (currentMetric === 'contacted') target = Math.round((hDataGlobal.contacted || 0) * dayRatio);
+                                else if (currentMetric === 'connected') target = Math.round((hDataGlobal.connects || hDataGlobal.userConnects || 0) * dayRatio);
+                                else target = Math.round((hDataGlobal.successes || hDataGlobal.userSuccesses || 0) * dayRatio);
                             }
                             row.hrs[hr].target = target;
                             row.totTarget += target;
@@ -743,38 +637,53 @@
                     return hrSortAsc ? (vA - vB) : (vB - vA);
                 });
 
+                const hFrag = document.createDocumentFragment();
                 hTableData.forEach(r => {
-                    let tr = `<tr class="table-row-zebra group"><td class="p-3 font-semibold font-sans text-gray-800 sticky-left shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap">${r.dateStr}</td>`;
-                    for (let hr = minHr; hr <= maxHr; hr++) tr += getMatrixCellHtml(r.hrs[hr].calls, r.hrs[hr].target);
-                    tr += getMatrixCellHtml(r.totCalls, r.totTarget, true);
-                    tr += `</tr>`;
-                    hBody.innerHTML += tr;
+                    const row = document.createElement('tr');
+                    row.className = "table-row-zebra group text-sm";
+                    let rowHtml = `<td class="p-4 font-semibold font-sans text-slate-800 sticky-left shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap">${r.dateStr}</td>`;
+                    for (let hr = minHr; hr <= maxHr; hr++) rowHtml += getMatrixCellHtml(r.hrs[hr].calls, r.hrs[hr].target);
+                    rowHtml += getMatrixCellHtml(r.totCalls, r.totTarget, true);
+                    row.innerHTML = rowHtml;
+                    hFrag.appendChild(row);
                 });
+                hBody.appendChild(hFrag);
 
                 // 3. STATE BY HOUR VIEW
                 const sHeader = document.getElementById('matrix-state-header');
                 const sBody = document.getElementById('matrix-state-body');
                 sHeader.innerHTML = ''; sBody.innerHTML = '';
 
-                let thS = `<tr><th class="p-3 font-bold text-[10px] text-white uppercase tracking-widest corner-sticky min-w-[150px] bg-gradient-to-b from-gray-800 to-gray-900 border-r border-gray-700 shadow-sm sortable ${stateSortCol==='stateStr' ? (stateSortAsc?'asc':'desc') : ''} whitespace-nowrap" onclick="window.sortState('stateStr')">State</th>`;
+                // 🛠️ MODERNIZED STATE HEADERS
+                let thS = `<tr class="bg-slate-50 border-b border-slate-200">
+                    <th class="p-4 font-black text-[10px] text-slate-800 uppercase tracking-widest corner-sticky min-w-[150px] border-r border-slate-200 shadow-sm header-sortable whitespace-nowrap" onclick="window.sortState('stateStr')">State ↕</th>`;
                 for (let hr = minHr; hr <= maxHr; hr++) {
-                    thS += `<th class="p-2 font-bold text-[10px] text-white uppercase tracking-widest text-center border-r border-[#003388] bg-gradient-to-b from-brandblue to-[#003388] min-w-[70px] header-sticky shadow-sm whitespace-nowrap">${hr}:00</th>`;
+                    thS += `<th class="p-3 font-bold text-[10px] text-slate-500 uppercase tracking-widest text-center border-r border-slate-200 min-w-[80px] header-sticky shadow-sm whitespace-nowrap">${hr}:00</th>`;
                 }
-                thS += `<th class="p-2 font-bold text-[10px] text-white uppercase tracking-widest text-center border-l-2 border-gray-600 bg-gradient-to-b from-gray-700 to-gray-800 min-w-[90px] header-sticky shadow-sm sortable ${stateSortCol==='totCalls' ? (stateSortAsc?'asc':'desc') : ''} whitespace-nowrap" onclick="window.sortState('totCalls')">Total</th></tr>`;
+                thS += `<th class="p-3 font-bold text-[10px] text-slate-800 uppercase tracking-widest text-center border-l-2 border-slate-200 min-w-[90px] header-sticky shadow-sm header-sortable whitespace-nowrap" onclick="window.sortState('totCalls')">Total ↕</th></tr>`;
                 sHeader.innerHTML = thS;
 
                 if (sTableData.length === 0) {
-                    Object.entries(activeData.states).forEach(([stName, stData]) => {
-                        if (stData.calls === 0) return;
+                    Object.entries(activeData.states || {}).forEach(([stName, stData]) => {
+                        if ((stData.calls || 0) === 0) return;
                         let row = { stateStr: stName, totCalls: 0, totTarget: 0, hrs: {} };
+                        let stateVol = stData.calls || 0;
+                        let stateRatio = globalVol > 0 ? (stateVol / globalVol) : 0;
                         
                         for (let hr = minHr; hr <= maxHr; hr++) {
                             let calls = 0, target = 0;
-                            if (stData.hourly && stData.hourly[hr]) {
-                                calls = stData.hourly[hr].calls;
-                                if (currentMetric === 'contacted') target = stData.hourly[hr].contacted || 0;
-                                else if (currentMetric === 'connected') target = stData.hourly[hr].connects || 0;
-                                else target = stData.hourly[hr].successes || 0;
+                            let stHr = stData.hourly?.[hr];
+                            if (stHr) {
+                                calls = stHr.calls || 0;
+                                if (currentMetric === 'contacted') target = stHr.contacted || 0;
+                                else if (currentMetric === 'connected') target = stHr.connects || stHr.userConnects || 0;
+                                else target = stHr.successes || stHr.userSuccesses || 0;
+                            } else if (stateRatio > 0 && activeData.globalHourly?.[hr]) {
+                                let hDataGlobal = activeData.globalHourly[hr];
+                                calls = Math.round((hDataGlobal.calls || 0) * stateRatio);
+                                if (currentMetric === 'contacted') target = Math.round((hDataGlobal.contacted || 0) * stateRatio);
+                                else if (currentMetric === 'connected') target = Math.round((hDataGlobal.connects || hDataGlobal.userConnects || 0) * stateRatio);
+                                else target = Math.round((hDataGlobal.successes || hDataGlobal.userSuccesses || 0) * stateRatio);
                             }
                             row.hrs[hr] = { calls: calls, target: target };
                             row.totCalls += calls; row.totTarget += target;
@@ -783,14 +692,23 @@
                     });
                 } else {
                     sTableData.forEach(row => {
-                        let stData = activeData.states[row.stateStr];
+                        let stData = activeData.states[row.stateStr] || {};
+                        let stateVol = stData.calls || 0;
+                        let stateRatio = globalVol > 0 ? (stateVol / globalVol) : 0;
                         row.totTarget = 0;
+                        
                         for (let hr = minHr; hr <= maxHr; hr++) {
                             let target = 0;
-                            if (stData && stData.hourly && stData.hourly[hr]) {
-                                if (currentMetric === 'contacted') target = stData.hourly[hr].contacted || 0;
-                                else if (currentMetric === 'connected') target = stData.hourly[hr].connects || 0;
-                                else target = stData.hourly[hr].successes || 0;
+                            let stHr = stData.hourly?.[hr];
+                            if (stHr) {
+                                if (currentMetric === 'contacted') target = stHr.contacted || 0;
+                                else if (currentMetric === 'connected') target = stHr.connects || stHr.userConnects || 0;
+                                else target = stHr.successes || stHr.userSuccesses || 0;
+                            } else if (stateRatio > 0 && activeData.globalHourly?.[hr]) {
+                                let hDataGlobal = activeData.globalHourly[hr];
+                                if (currentMetric === 'contacted') target = Math.round((hDataGlobal.contacted || 0) * stateRatio);
+                                else if (currentMetric === 'connected') target = Math.round((hDataGlobal.connects || hDataGlobal.userConnects || 0) * stateRatio);
+                                else target = Math.round((hDataGlobal.successes || hDataGlobal.userSuccesses || 0) * stateRatio);
                             }
                             row.hrs[hr].target = target;
                             row.totTarget += target;
@@ -804,21 +722,98 @@
                     return stateSortAsc ? (vA - vB) : (vB - vA);
                 });
 
+                const sFrag = document.createDocumentFragment();
                 sTableData.forEach(r => {
-                    let tr = `<tr class="table-row-zebra group"><td class="p-3 font-semibold font-sans text-gray-800 sticky-left truncate max-w-[150px] whitespace-nowrap shadow-[2px_0_5px_rgba(0,0,0,0.02)]" title="${r.stateStr}">${r.stateStr}</td>`;
-                    for (let hr = minHr; hr <= maxHr; hr++) tr += getMatrixCellHtml(r.hrs[hr].calls, r.hrs[hr].target);
-                    tr += getMatrixCellHtml(r.totCalls, r.totTarget, true);
-                    tr += `</tr>`;
-                    sBody.innerHTML += tr;
+                    const row = document.createElement('tr');
+                    row.className = "table-row-zebra group text-sm";
+                    let rowHtml = `<td class="p-4 font-semibold font-sans text-slate-800 sticky-left truncate max-w-[150px] whitespace-nowrap shadow-[2px_0_5px_rgba(0,0,0,0.02)]" title="${r.stateStr}">${r.stateStr}</td>`;
+                    for (let hr = minHr; hr <= maxHr; hr++) rowHtml += getMatrixCellHtml(r.hrs[hr].calls, r.hrs[hr].target);
+                    rowHtml += getMatrixCellHtml(r.totCalls, r.totTarget, true);
+                    row.innerHTML = rowHtml;
+                    sFrag.appendChild(row);
                 });
+                sBody.appendChild(sFrag);
+            };
+
+            const renderMatrices = (skipCampaignRender = false) => {
+                if (!activeData) return;
+                
+                const loadingOverlay = document.getElementById('loading-overlay');
+                const batchProgress = document.getElementById('batch-progress');
+                loadingOverlay.classList.remove('hidden');
+                if(batchProgress) batchProgress.innerText = "Building Matrices...";
+
+                const dates = Object.keys(activeData.dailyMetrics || {}).sort();
+                if(dates.length === 0) {
+                    loadingOverlay.classList.add('hidden');
+                    return;
+                }
+                
+                let globalVol = activeData.global_kpis?.totalCalls || activeData.global_kpis?.calls || 1;
+
+                if (skipCampaignRender) {
+                    buildHourlyAndState();
+                    loadingOverlay.classList.add('hidden');
+                    return;
+                }
+
+                const cHeader = document.getElementById('matrix-camp-header');
+                const cBody = document.getElementById('matrix-camp-body');
+                cHeader.innerHTML = ''; cBody.innerHTML = '';
+
+                // 🛠️ MODERNIZED CAMPAIGN HEADERS
+                let thC = `<tr class="bg-slate-50 border-b border-slate-200">
+                    <th class="p-4 font-black text-[10px] text-slate-800 uppercase tracking-widest corner-sticky w-[350px] min-w-[350px] max-w-[350px] border-r border-slate-200 shadow-sm header-sortable whitespace-nowrap" onclick="window.sortCamp('campName')">Campaign Name ↕</th>`;
+                dates.forEach(d => thC += `<th class="p-3 font-bold text-[10px] text-slate-500 uppercase tracking-widest text-center border-r border-slate-200 min-w-[80px] header-sticky shadow-sm whitespace-nowrap">${d.substring(5)}</th>`);
+                thC += `<th class="p-3 font-bold text-[10px] text-slate-800 uppercase tracking-widest text-center border-l-2 border-slate-200 min-w-[90px] header-sticky shadow-sm header-sortable whitespace-nowrap" onclick="window.sortCamp('totCalls')">Total ↕</th></tr>`;
+                cHeader.innerHTML = thC;
+
+                const campEntries = Object.entries(activeData.campaigns || {});
+                cTableData = [];
+                let index = 0;
+
+                function processCampaignChunk() {
+                    const limit = Math.min(index + 200, campEntries.length);
+                    if(batchProgress) batchProgress.innerText = `Matrix Calculation: ${limit.toLocaleString()} / ${campEntries.length.toLocaleString()}`;
+
+                    for (; index < limit; index++) {
+                        const [campName, cData] = campEntries[index];
+                        if ((cData.calls || 0) === 0) continue;
+                        let row = { campName: campName, totCalls: 0, totTarget: 0, days: {} };
+                        dates.forEach(d => {
+                            let calls = 0, target = 0;
+                            let dailyVolGlobal = activeData.dailyMetrics[d].calls || 0;
+                            if (globalVol > 0 && dailyVolGlobal > 0) {
+                                let dailyWeight = dailyVolGlobal / globalVol;
+                                calls = Math.round((cData.calls || 0) * dailyWeight);
+                                if (currentMetric === 'contacted') target = Math.round((cData.contacted || 0) * dailyWeight);
+                                else if (currentMetric === 'connected') target = Math.round((cData.connects || cData.userConnects || 0) * dailyWeight);
+                                else target = Math.round((cData.successes || cData.userSuccesses || 0) * dailyWeight);
+                            }
+                            row.days[d] = { calls: calls, target: target };
+                            row.totCalls += calls; row.totTarget += target;
+                        });
+                        cTableData.push(row);
+                    }
+
+                    if (index < campEntries.length) {
+                        setTimeout(processCampaignChunk, 0); 
+                    } else {
+                        window.sortCamp(campSortCol, true); 
+                        document.getElementById('matrix-camp-body').innerHTML = '';
+                        renderCampSlice();
+                        buildHourlyAndState();
+                        loadingOverlay.classList.add('hidden');
+                    }
+                }
+                setTimeout(processCampaignChunk, 0);
             };
 
             const loadDashboardData = (sourceDataStr) => {
-                const rawData = sourceDataStr || sessionStorage.getItem('dearDiallyMasterData');
+                const rawData = sourceDataStr || window.parent.diallyMemory?.masterData;
                 if (!rawData) { alert("No data found. Please upload a CSV on the Settings page."); return; }
-                activeData = JSON.parse(rawData);
+                activeData = (typeof rawData === 'string') ? JSON.parse(rawData) : rawData;
                 
-                // BULLETPROOF DROPDOWN POPULATOR (Preserves SVGs)
                 const populateDropdown = (dropId, btnId, objOrSet, defaultText) => {
                     const el = document.getElementById(dropId); 
                     const btnTextNode = document.getElementById(btnId.replace('btn-', 'text-'));
@@ -846,7 +841,8 @@
                         items.sort();
                         items.forEach(i => {
                             let idSafe = String(i).replace(/[^a-zA-Z0-9]/g, '_');
-                            el.innerHTML += `<label class="filter-option text-gray-700 hover:text-brandblue font-medium"><input type="checkbox" value="${i}" id="chk_${dropId}_${idSafe}">${i}</label>`;
+                            let safeVal = String(i).replace(/"/g, '&quot;'); 
+                            el.innerHTML += `<label class="filter-option text-slate-700 hover:text-brandblue font-medium"><input type="checkbox" value="${safeVal}" id="chk_${dropId}_${idSafe}">${i}</label>`;
                         });
                         
                         el.querySelectorAll('input').forEach(chk => {
@@ -872,19 +868,24 @@
                 populateDropdown('dropdown-campaign', 'btn-filter-campaign', opts.campaigns, 'All Selected');
                 populateDropdown('dropdown-list', 'btn-filter-list', opts.lists, 'All Selected');
 
-                let k = activeData.global_kpis;
-                document.getElementById('kpi-total-calls').innerText = k.totalCalls.toLocaleString();
-                document.getElementById('kpi-contact-rate').innerText = k.totalCalls > 0 ? formatPct((k.contacted / k.totalCalls) * 100) : "0%";
-                document.getElementById('kpi-connect-rate').innerText = k.totalCalls > 0 ? formatPct((k.userConnects / k.totalCalls) * 100) : "0%";
+                let k = activeData.global_kpis || {};
+                const totalCalls = k.totalCalls || k.calls || 0;
+                const contacted = k.contacted || 0;
+                const connected = k.userConnects || k.connects || 0;
+                const successes = k.userSuccesses || k.successes || 0;
 
-                document.getElementById('funnel-calls').innerText = k.totalCalls.toLocaleString();
-                document.getElementById('funnel-contacted').innerText = k.contacted.toLocaleString();
-                document.getElementById('funnel-connected').innerText = k.userConnects.toLocaleString();
-                document.getElementById('funnel-successes').innerText = k.userSuccesses.toLocaleString();
+                document.getElementById('kpi-total-calls').innerText = totalCalls.toLocaleString();
+                document.getElementById('kpi-contact-rate').innerText = totalCalls > 0 ? formatPct((contacted / totalCalls) * 100) : "0%";
+                document.getElementById('kpi-connect-rate').innerText = totalCalls > 0 ? formatPct((connected / totalCalls) * 100) : "0%";
 
-                document.getElementById('funnel-ctc-rate').innerText = k.totalCalls > 0 ? formatPct((k.contacted / k.totalCalls) * 100) : "0%";
-                document.getElementById('funnel-conn-rate').innerText = k.contacted > 0 ? formatPct((k.userConnects / k.contacted) * 100) : "0%";
-                document.getElementById('funnel-succ-rate').innerText = k.userConnects > 0 ? formatPct((k.userSuccesses / k.userConnects) * 100) : "0%";
+                document.getElementById('funnel-calls').innerText = totalCalls.toLocaleString();
+                document.getElementById('funnel-contacted').innerText = contacted.toLocaleString();
+                document.getElementById('funnel-connected').innerText = connected.toLocaleString();
+                document.getElementById('funnel-successes').innerText = successes.toLocaleString();
+
+                document.getElementById('funnel-ctc-rate').innerText = totalCalls > 0 ? formatPct((contacted / totalCalls) * 100) : "0%";
+                document.getElementById('funnel-conn-rate').innerText = contacted > 0 ? formatPct((connected / contacted) * 100) : "0%";
+                document.getElementById('funnel-succ-rate').innerText = connected > 0 ? formatPct((successes / connected) * 100) : "0%";
 
                 cTableData = []; hTableData = []; sTableData = [];
                 
@@ -894,60 +895,64 @@
             };
 
             const executeFilters = () => {
+                const memory = window.parent.diallyMemory;
+                if (!memory || !memory.rawCsvFile) return;
+
                 const loadingOverlay = document.getElementById('loading-overlay');
                 loadingOverlay.classList.remove('hidden');
                 
                 const getVals = (id) => Array.from(document.getElementById(id).querySelectorAll('input:checked')).map(i => i.value);
                 
                 const activeFilters = {
-                    months: getVals('dropdown-month'), weeks: getVals('dropdown-week'),  
+                    months: getVals('dropdown-month'), weeks: getVals('dropdown-week'),
                     dates: getVals('dropdown-date'), campaigns: getVals('dropdown-campaign'),
-                    lists: getVals('dropdown-list'), domainAnis: [], areaCodes: [], anis: []
+                    lists: getVals('dropdown-list')
                 };
 
-                localforage.getItem('dearDiallyRawCSV').then(function(fileData) {
-                    if (fileData) {
-                        const filterWorker = new Worker('worker.js');
-                        const mappingConfig = JSON.parse(localStorage.getItem('diallyUserPrefs')) || { connects: [], successes: [], ansMac: [], badNum: [], noAns: [] };
-                        const safeBlob = fileData instanceof Blob ? fileData : new Blob([fileData], { type: 'text/csv' });
-                        
-                        filterWorker.onmessage = function(e) {
-                            if (e.data.status === 'complete') {
-                                loadingOverlay.classList.add('hidden');
-                                cTableData = []; hTableData = []; sTableData = []; 
-                                loadDashboardData(JSON.stringify(e.data.results));
-                                filterWorker.terminate();
-                                document.getElementById('clear-filters-btn').classList.remove('hidden');
-                            }
-                        };
-                        filterWorker.onerror = function(error) {
-                            alert("Filter Engine error."); loadingOverlay.classList.add('hidden'); filterWorker.terminate();
-                        };
-                        filterWorker.postMessage({ action: 'PROCESS_CSV', file: safeBlob, mappingConfig: mappingConfig, domainAnis: [], filters: activeFilters });
-                    } else {
-                        alert("File not found in memory."); loadingOverlay.classList.add('hidden');
+                const filterWorker = new Worker('worker.js');
+                let mappingConfig = {};
+                try { mappingConfig = JSON.parse(localStorage.getItem('diallyUserPrefs')); } catch(e) {}
+                mappingConfig = mappingConfig || { connects: [], successes: [], ansMac: [], badNum: [], noAns: [] };
+                
+                const domainAnis = memory.inventoryAnis || [];
+
+                filterWorker.onmessage = function(e) {
+                    if (e.data.status === 'complete') {
+                        loadingOverlay.classList.add('hidden');
+                        cTableData = []; hTableData = []; sTableData = []; 
+                        loadDashboardData(e.data.results);
+                        filterWorker.terminate();
+                        document.getElementById('clear-filters-btn').classList.remove('hidden');
                     }
-                });
+                };
+                
+                filterWorker.postMessage({ action: 'PROCESS_CSV', file: memory.rawCsvFile, mappingConfig: mappingConfig, domainAnis: domainAnis, filters: activeFilters });
             };
 
-            document.getElementById('apply-filters-btn').addEventListener('click', executeFilters);
-            document.getElementById('clear-filters-btn').addEventListener('click', () => {
-                document.querySelectorAll('.filter-dropdown input').forEach(chk => chk.checked = false);
-                
-                document.getElementById('text-filter-month').innerText = "All Selected";
-                document.getElementById('text-filter-week').innerText = "All Selected";
-                document.getElementById('text-filter-date').innerText = "All Selected";
-                document.getElementById('text-filter-campaign').innerText = "All Selected";
-                document.getElementById('text-filter-list').innerText = "All Selected";
-                
-                document.getElementById('clear-filters-btn').classList.add('hidden');
+            document.getElementById('apply-filters-btn').addEventListener('click', (e) => {
+                e.preventDefault();
                 executeFilters();
             });
+            
+            document.getElementById('clear-filters-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.filter-dropdown input').forEach(chk => chk.checked = false);
+                document.querySelectorAll('.filter-dropdown').forEach(d => d.previousElementSibling.innerText = "All Selected");
+                document.getElementById('clear-filters-btn').classList.add('hidden');
+                
+                document.getElementById('loading-overlay').classList.remove('hidden');
+                setTimeout(() => { loadDashboardData(); document.getElementById('loading-overlay').classList.add('hidden'); }, 300);
+            });
 
-            // Make CSV Export globally available
-            window.exportTableToCSV = function() {
-                // Since this page has multiple matrices, we will default to exporting the Campaign Matrix.
-                const table = document.getElementById("matrix-camp-body").parentNode;
+            // 🛠️ 'COMING SOON' AI MODAL TRIGGER
+            document.getElementById('ask-dially-trigger').addEventListener('click', () => {
+                document.getElementById('ai-modal').classList.remove('hidden');
+            });
+
+            window.exportMatrixToCSV = function(tbodyId, filename) {
+                const tbody = document.getElementById(tbodyId);
+                if (!tbody) return;
+                const table = tbody.parentNode;
                 let csv = [];
                 for (let i = 0; i < table.rows.length; i++) {
                     let row = [], cols = table.rows[i].querySelectorAll("td, th");
@@ -958,20 +963,34 @@
                     }
                     csv.push(row.join(","));
                 }
-                let csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
-                let downloadLink = document.createElement("a");
-                downloadLink.download = "Connect_Rates.csv";
-                downloadLink.href = window.URL.createObjectURL(csvFile);
-                downloadLink.style.display = "none";
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
+                let link = document.createElement("a");
+                link.download = filename;
+                link.href = window.URL.createObjectURL(new Blob([csv.join("\n")], {type: "text/csv"}));
+                link.click();
             };
 
-            // Initialize Page
-            loadDashboardData(); 
+            // Unified Header CSV Export for the main Campaign matrix
+            window.exportToGlobalCSV = function() {
+                window.exportMatrixToCSV('matrix-camp-body', 'Global_Connect_Rates_Campaigns.csv');
+            };
 
-        }); // END OF DOMContentLoaded
+            window.exportWorkspacePDF = function() {
+                html2pdf().set({ 
+                    margin: [0.2, 0.2, 0.2, 0.2], 
+                    filename: 'Dially_Connect_Rates.pdf', 
+                    image: { type: 'jpeg', quality: 1 }, 
+                    html2canvas: { scale: 1, useCORS: true, windowWidth: document.getElementById('pdf-export-area').scrollWidth }, 
+                    jsPDF: { unit: 'in', format: 'tabloid', orientation: 'landscape' } 
+                }).from(document.getElementById('pdf-export-area')).save();
+            };
+
+            if (window.parent.diallyMemory?.masterData) {
+                loadDashboardData(window.parent.diallyMemory.masterData);
+            } else {
+                executeFilters();
+            }
+
+        }); 
     </script>
 </body>
 </html>

@@ -6,10 +6,10 @@ const path = require('path');
 
 function createWindow() {
   const win = new BrowserWindow({
-    // 10% larger than 1440x900
-    width: 1584,
-    height: 990,
-    resizable: false, 
+    // Optimized for 15-inch 1080p displays
+    width: 1920,
+    height: 1080,
+    resizable: true, // Changed to true for better compatibility
     show: false, // Prevents the white flash
     backgroundColor: '#f9fafb', // Matches your UI background
     webPreferences: {
@@ -22,6 +22,8 @@ function createWindow() {
 
   // Only show the window once the content is fully rendered
   win.once('ready-to-show', () => {
+    // Optional: Use win.maximize() if you want it to fill the screen automatically
+    // win.maximize(); 
     win.show();
   });
 }

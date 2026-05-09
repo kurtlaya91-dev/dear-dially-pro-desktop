@@ -1,7 +1,7 @@
 {
-  "name": "dear-dially-pro",
+  "name": "Dear Dially",
   "version": "1.0.0",
-  "description": "The professional desktop edition of Dear Dially.",
+  "description": "Built for Five9 TAMs.",
   "author": "Kurt Laya",
   "main": "main.js",
   "scripts": {
